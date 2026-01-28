@@ -5,7 +5,7 @@ import { proPage } from "../apis/api";
 import TableComponents from "../components/admin/table/Table";
 import GetIssuesComponent from "../components/admin/issues/GetIssuesComponent";
 import GetUnCheckedComponent from "../components/admin/unchecked/GetUnChecked";
-import useCourseStore from "../\bstore/useCourseStore";
+import useCourseStore from "../store/useCourseStore";
 import AdminNavigationTabs from "../components/tab/AdminTab";
 import { ContentContainer } from "../components/content_layout/styles";
 

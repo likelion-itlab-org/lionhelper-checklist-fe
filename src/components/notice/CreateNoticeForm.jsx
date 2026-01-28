@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import { useLocation, useNavigate } from "react-router-dom";
 import { GoChevronLeft } from "react-icons/go";
-import useAuthStore from "../../\bstore/useAuthStore";
+import useAuthStore from "../../store/useAuthStore";
 import { proPage } from "../../apis/api";
 
 const Container = styled.div`

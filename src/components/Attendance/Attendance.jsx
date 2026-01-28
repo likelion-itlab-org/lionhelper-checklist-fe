@@ -17,7 +17,7 @@ import {
   TitleContainer,
   DownloadButton,
 } from "./styles";
-import useCourseStore from "../../\bstore/useCourseStore";
+import useCourseStore from "../../store/useCourseStore";
 
 const AttendanceRecord = ({ selectedDate }) => {
   const { selectedCourse } = useCourseStore(); // 선택된 과정 가져오기

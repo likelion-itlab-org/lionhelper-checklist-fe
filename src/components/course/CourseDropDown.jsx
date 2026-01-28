@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import useCourseStore from "../../\bstore/useCourseStore";
+import useCourseStore from "../../store/useCourseStore";
 // import useCourseStore from "../../store/useCourseStore";
 import {
   Wrapper,

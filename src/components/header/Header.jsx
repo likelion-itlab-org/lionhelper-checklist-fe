@@ -19,7 +19,7 @@ import {
   Icon,
   LogoutButton,
 } from "./styles";
-import useAuthStore from "../../\bstore/useAuthStore";
+import useAuthStore from "../../store/useAuthStore";
 import { Outlet } from "react-router-dom"; // ✅ Outlet을 가져오기!
 import { proPage } from "../../apis/api";
 

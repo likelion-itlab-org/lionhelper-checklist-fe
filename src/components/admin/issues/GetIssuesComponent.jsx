@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { proPage } from "../../../apis/api";
-import useCourseStore from "../../../\bstore/useCourseStore";
+import useCourseStore from "../../../store/useCourseStore";
 import {
   Container,
   Title,
@@ -26,7 +26,7 @@ import {
   ContentWrapper,
   ContentLine,
 } from "./styles";
-import useAuthStore from "../../../\bstore/useAuthStore";
+import useAuthStore from "../../../store/useAuthStore";
 
 const GetIssuesComponent = () => {
   const { courseItems } = useCourseStore();

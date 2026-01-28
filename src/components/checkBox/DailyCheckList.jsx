@@ -38,13 +38,13 @@ import {
   IssueTitleContainer,
   IssueTitle,
 } from "./styles";
-import useCourseStore from "../../\bstore/useCourseStore";
+import useCourseStore from "../../store/useCourseStore";
 import { SubmitButton as IssueSubmitButton } from "../issue/styles";
 import {
   loadFromLocalStorage,
   saveToLocalStorage,
 } from "../../utils/saveCheckList";
-import useAuthStore from "../../\bstore/useAuthStore";
+import useAuthStore from "../../store/useAuthStore";
 
 const DailyCheckList = ({ activeTab }) => {
   const { selectedCourse } = useCourseStore(); // 선택된 과정 가져오기
