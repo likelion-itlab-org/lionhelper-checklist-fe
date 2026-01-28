@@ -1,7 +1,7 @@
 // import React from "react";
 // import styled from "styled-components";
 // import { NavLink, useNavigate } from "react-router-dom";
-// import useAuthStore from "../../\bstore/useAuthStore";
+// import useAuthStore from "../../store/useAuthStore";
 
 // // 헤더 스타일
 // const HeaderContainer = styled.header`

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import useAuthStore from "../../\bstore/useAuthStore";
+import useAuthStore from "../../store/useAuthStore";
 import {
   Container,
   LoginBox,

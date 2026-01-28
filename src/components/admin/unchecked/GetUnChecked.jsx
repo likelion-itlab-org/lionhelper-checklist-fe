@@ -20,7 +20,7 @@ import {
   TitleWrapper,
 } from "../issues/styles";
 import TaskList from "./TaskList";
-import useCourseStore from "../../../\bstore/useCourseStore";
+import useCourseStore from "../../../store/useCourseStore";
 
 const GetUnCheckedComponent = () => {
   const { courseItems } = useCourseStore();

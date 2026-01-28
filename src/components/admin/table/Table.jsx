@@ -19,9 +19,9 @@ import {
   DropdownList,
   TitleWrapper,
 } from "../issues/styles";
-import useCourseStore from "../../../\bstore/useCourseStore";
+import useCourseStore from "../../../store/useCourseStore";
 import GetIssuesComponent from "../issues/GetIssuesComponent";
-import useAuthStore from "../../../\bstore/useAuthStore";
+import useAuthStore from "../../../store/useAuthStore";
 
 const TableComponents = () => {
   // const { courseItems } = useCourseStore();
