@@ -56,14 +56,21 @@ const TableHead = styled.thead`
 `;
 
 const TableRow = styled.tr`
+  background-color: ${({ $active }) => ($active ? "rgba(255, 202, 162, 0.8)" : "transparent")};
+
   &:nth-child(even) {
-    background-color: #f8fafc;
+    background-color: ${({ $active }) =>
+      $active ? "rgba(255, 202, 162, 0.8)" : "#f8fafc"};
   }
+
   &:hover {
-    background-color: #f1f5f9;
+    background-color: ${({ $active }) =>
+      $active ? undefined : "#f1f5f9"};
     transition: background-color 0.2s ease-in-out;
   }
 `;
+
+
 
 const TableHeader = styled.th`
   padding: 16px;
