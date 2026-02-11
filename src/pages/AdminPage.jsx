@@ -1,3 +1,6 @@
+// AdminPage.jsx (전체 코드)
+// ✅ 테이블 토글 클릭 시 하단 이슈 목록(selectedCourse)도 해당 과정으로 변경
+// ✅ 하단 드롭다운은 기존대로 유지
 import React, { useEffect, useState } from "react";
 import AdminNavigationTabs from "../components/tab/AdminTab";
 import { ContentContainer } from "../components/content_layout/styles";
@@ -17,7 +20,7 @@ const AdminPage = () => {
     <ContentContainer>
       <AdminNavigationTabs />
 
-      <TableComponents selectedCourse={selectedCourse} />
+      <TableComponents onSelectCourse={setSelectedCourse} />
 
       <GetIssuesComponent
         selectedCourse={selectedCourse}

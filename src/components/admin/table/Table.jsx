@@ -19,15 +19,12 @@ import {
   TitleWrapper,
 } from "../issues/styles";
 
-const TableComponents = ({ selectedCourse }) => {
+const TableComponents = ({ onSelectCourse }) => {
   const [allCheckRate, setAllCheckRate] = useState([]);
   const [selectedDept, setSelectedDept] = useState("전체 보기");
-  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [deptDropdownOpen, setDeptDropdownOpen] = useState(false);
 
-  // ✅ 여러 과정 동시 토글
   const [openCourses, setOpenCourses] = useState(() => new Set());
-
-  // ✅ 테이블 토글 영역에 보여줄 이슈 데이터(미리보기)
   const [issuesItems, setIssuesItems] = useState([]);
 
   useEffect(() => {
@@ -70,7 +67,6 @@ const TableComponents = ({ selectedCourse }) => {
       : allCheckRate;
   }, [allCheckRate, selectedDept]);
 
-  // ✅ training_course -> issues[] 맵
   const issuesByCourse = useMemo(() => {
     const map = new Map();
     issuesItems.forEach((courseItem) => {
@@ -82,31 +78,34 @@ const TableComponents = ({ selectedCourse }) => {
   const toggleCourse = (course) => {
     setOpenCourses((prev) => {
       const next = new Set(prev);
-      if (next.has(course)) next.delete(course);
-      else next.add(course);
+      const willOpen = !next.has(course);
+
+      if (willOpen) {
+        next.add(course);
+        onSelectCourse?.(course); 
+      } else {
+        next.delete(course);
+      }
+
       return next;
     });
-  };
-
-  // (선택) 이슈 content를 짧게 미리보기로 보여주고 싶을 때
-  const previewText = (text, max = 140) => {
-    const t = String(text ?? "").replace(/\s+/g, " ").trim();
-    return t.length > max ? `${t.slice(0, max)}…` : t;
   };
 
   return (
     <Container>
       <TitleWrapper>
-        <DropdownContainer onClick={() => setDropdownOpen(!dropdownOpen)}>
+        <DropdownContainer
+          onClick={() => setDeptDropdownOpen(!deptDropdownOpen)}
+        >
           {selectedDept}
           <DropdownIcon />
-          <DropdownList isOpen={dropdownOpen}>
+          <DropdownList isOpen={deptDropdownOpen}>
             {uniqueDepts.map((dept) => (
               <DropdownItem
                 key={dept}
                 onClick={() => {
                   setSelectedDept(dept);
-                  setDropdownOpen(false);
+                  setDeptDropdownOpen(false);
                 }}
               >
                 {dept}
@@ -133,17 +132,13 @@ const TableComponents = ({ selectedCourse }) => {
             {filteredCheckRate.map((item) => {
               const course = item.training_course;
               const isOpen = openCourses.has(course);
-              const isSelected = selectedCourse === course;
-
               const courseIssues = issuesByCourse.get(course) || [];
 
               return (
                 <React.Fragment key={course}>
                   <TableRow
-                    // ✅ 강조: 열려있거나(토글), 하단 드롭다운에서 선택된 과정이면 강조 유지
-                    // 원치 않으면 $active={isOpen} 로 바꾸면 됨
-                    $active={isOpen || isSelected}
-                    onClick={() => toggleCourse(course)} // ✅ 하단 선택과 분리!
+                    $active={isOpen} 
+                    onClick={() => toggleCourse(course)}
                     style={{ cursor: "pointer" }}
                   >
                     <TableCell>{course}</TableCell>
@@ -160,7 +155,6 @@ const TableComponents = ({ selectedCourse }) => {
                     <TableCell>{item.overall_check_rate}</TableCell>
                   </TableRow>
 
-                  {/* ✅ 토글 펼침 영역 */}
                   {isOpen && (
                     <tr>
                       <td colSpan={6} style={{ padding: 0 }}>
@@ -172,7 +166,7 @@ const TableComponents = ({ selectedCourse }) => {
                           }}
                         >
                           <div style={{ fontWeight: 700, marginBottom: 10 }}>
-                            {course} 이슈 ({courseIssues.length})
+                            {course} 이슈 (최근 5개)
                           </div>
 
                           {courseIssues.length === 0 ? (
@@ -180,12 +174,19 @@ const TableComponents = ({ selectedCourse }) => {
                           ) : (
                             <ul style={{ margin: 0, paddingLeft: 18 }}>
                               {courseIssues.slice(0, 5).map((issue) => (
-                                <li key={issue.id} style={{ marginBottom: 10 }}>
+                                <li key={issue.id} style={{ marginBottom: 12 }}>
                                   <div style={{ fontWeight: 600 }}>
                                     {issue.created_by}
                                   </div>
-                                  <div style={{ whiteSpace: "pre-wrap" }}>
-                                    {previewText(issue.content)}
+
+                                  <div
+                                    style={{
+                                      whiteSpace: "pre-wrap",
+                                      wordBreak: "break-word",
+                                      lineHeight: 1.6,
+                                    }}
+                                  >
+                                    {issue.content}
                                   </div>
                                 </li>
                               ))}
@@ -200,8 +201,8 @@ const TableComponents = ({ selectedCourse }) => {
                                 fontSize: 13,
                               }}
                             >
-                              ※ 전체 이슈/댓글/해결 처리는 아래 “이슈사항” 영역에서
-                              진행하세요.
+                              ※ 나머지 이슈/댓글/해결 처리는 아래 “이슈사항”에서
+                              확인하세요.
                             </div>
                           )}
                         </div>
