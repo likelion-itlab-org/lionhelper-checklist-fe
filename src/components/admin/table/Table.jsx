@@ -30,17 +30,17 @@ const TableComponents = ({ onSelectCourse }) => {
   useEffect(() => {
     const fetchAllCheckRate = async () => {
       try {
-        const response = await proPage.getAllCheckRate();
-        if (response?.data?.data) setAllCheckRate(response.data.data);
-      } catch (error) {
-        console.error("Error fetching checklist:", error);
+        const res = await proPage.getAllCheckRate();
+        if (res?.data?.data) setAllCheckRate(res.data.data);
+      } catch (e) {
+        console.error(e);
       }
     };
     fetchAllCheckRate();
   }, []);
 
   useEffect(() => {
-    const fetchIssuesList = async () => {
+    const fetchIssues = async () => {
       try {
         const res = await proPage.getIssues();
         if (res?.data?.data && Array.isArray(res.data.data)) {
@@ -49,31 +49,31 @@ const TableComponents = ({ onSelectCourse }) => {
           setIssuesItems([]);
         }
       } catch (e) {
-        console.error("Error fetching issues:", e);
+        console.error(e);
         setIssuesItems([]);
       }
     };
-    fetchIssuesList();
+    fetchIssues();
   }, []);
 
+
   const uniqueDepts = useMemo(
-    () => ["전체 보기", ...new Set(allCheckRate.map((item) => item.dept))],
+    () => ["전체 보기", ...new Set(allCheckRate.map((v) => v.dept))],
     [allCheckRate]
   );
 
   const filteredCheckRate = useMemo(() => {
-    return selectedDept !== "전체 보기"
-      ? allCheckRate.filter((item) => item.dept === selectedDept)
-      : allCheckRate;
+    return selectedDept === "전체 보기"
+      ? allCheckRate
+      : allCheckRate.filter((v) => v.dept === selectedDept);
   }, [allCheckRate, selectedDept]);
 
   const issuesByCourse = useMemo(() => {
     const map = new Map();
-    issuesItems.forEach((courseItem) => {
-      map.set(courseItem.training_course, courseItem.issues || []);
-    });
+    issuesItems.forEach((v) => map.set(v.training_course, v.issues || []));
     return map;
   }, [issuesItems]);
+
 
   const toggleCourse = (course) => {
     setOpenCourses((prev) => {
@@ -89,6 +89,36 @@ const TableComponents = ({ onSelectCourse }) => {
 
       return next;
     });
+  };
+
+  const formatDate = (createdAt) => {
+    if (!createdAt) return "";
+    const d = new Date(createdAt);
+    if (Number.isNaN(d.getTime())) return "";
+
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${mm}/${dd}`;
+  };
+
+  const DateBadge = ({ text }) => {
+    if (!text) return null;
+    return (
+      <span
+        style={{
+          marginRight: 8,
+          padding: "2px 10px",
+          borderRadius: 9999,
+          background: "#FF7710",
+          color: "#fff",
+          fontSize: 12,
+          fontWeight: 600,
+          whiteSpace: "nowrap",
+        }}
+      >
+        {text}
+      </span>
+    );
   };
 
   return (
@@ -132,25 +162,23 @@ const TableComponents = ({ onSelectCourse }) => {
             {filteredCheckRate.map((item) => {
               const course = item.training_course;
               const isOpen = openCourses.has(course);
-              const courseIssues = issuesByCourse.get(course) || [];
+              const issues = issuesByCourse.get(course) || [];
 
               return (
                 <React.Fragment key={course}>
                   <TableRow
-                    $active={isOpen} 
+                    $active={isOpen}
                     onClick={() => toggleCourse(course)}
                     style={{ cursor: "pointer" }}
                   >
                     <TableCell>{course}</TableCell>
                     <TableCell>{item.manager_name}</TableCell>
                     <TableCell>{item.daily_check_rate}</TableCell>
-
                     <TableUrgencyCell>
                       <UrgencyBadge urgent={item.daily_check_rate === "100.0%"}>
                         {item.daily_check_rate === "100.0%" ? "완수" : "미완수"}
                       </UrgencyBadge>
                     </TableUrgencyCell>
-
                     <TableCell>{item.yesterday_check_rate}</TableCell>
                     <TableCell>{item.overall_check_rate}</TableCell>
                   </TableRow>
@@ -160,22 +188,41 @@ const TableComponents = ({ onSelectCourse }) => {
                       <td colSpan={6} style={{ padding: 0 }}>
                         <div
                           style={{
-                            padding: "16px 20px",
+                            padding: 24,
                             background: "#fff7ed",
                             borderBottom: "1px solid #e2e8f0",
                           }}
                         >
-                          <div style={{ fontWeight: 700, marginBottom: 10 }}>
-                            {course} 이슈 (최근 5개)
-                          </div>
 
-                          {courseIssues.length === 0 ? (
+                          {issues.length === 0 ? (
                             <div style={{ color: "#666" }}>이슈가 없습니다.</div>
                           ) : (
-                            <ul style={{ margin: 0, paddingLeft: 18 }}>
-                              {courseIssues.slice(0, 5).map((issue) => (
-                                <li key={issue.id} style={{ marginBottom: 12 }}>
-                                  <div style={{ fontWeight: 600 }}>
+                            <ul
+                              style={{
+                                listStyle: "none",
+                                paddingLeft: 0,
+                                margin: 0,
+                              }}
+                            >
+                              {issues.slice(0, 5).map((issue, idx) => (
+                                <li
+                                  key={issue.id}
+                                  style={{
+                                    paddingTop: idx === 0 ? 0 : 12,
+                                    marginTop: idx === 0 ? 0 : 12,
+                                    borderTop:
+                                      idx === 0 ? "none" : "1px solid #E5E7EB",
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      fontWeight: 600,
+                                      marginBottom: 4,
+                                    }}
+                                  >
+                                    <DateBadge text={formatDate(issue.created_at)} />
                                     {issue.created_by}
                                   </div>
 
@@ -193,10 +240,10 @@ const TableComponents = ({ onSelectCourse }) => {
                             </ul>
                           )}
 
-                          {courseIssues.length > 5 && (
+                          {issues.length > 5 && (
                             <div
                               style={{
-                                marginTop: 8,
+                                marginTop: 10,
                                 color: "#666",
                                 fontSize: 13,
                               }}
