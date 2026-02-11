@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   TableWrapper,
-  Title,
   Container,
   Table,
   TableHead,
@@ -19,50 +18,81 @@ import {
   DropdownList,
   TitleWrapper,
 } from "../issues/styles";
-import useCourseStore from "../../../store/useCourseStore";
-import GetIssuesComponent from "../issues/GetIssuesComponent";
-import useAuthStore from "../../../store/useAuthStore";
 
-
-const TableComponents = ({
-  selectedCourse,
-  onSelectCourse,
-}) => {
-  const [taskData, setTaskData] = useState([]);
-  const [selectedDept, setSelectedDept] = useState("전체 보기");
-  const { username, logout } = useAuthStore(); 
+const TableComponents = ({ selectedCourse }) => {
   const [allCheckRate, setAllCheckRate] = useState([]);
+  const [selectedDept, setSelectedDept] = useState("전체 보기");
   const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  // ✅ 여러 과정 동시 토글
+  const [openCourses, setOpenCourses] = useState(() => new Set());
+
+  // ✅ 테이블 토글 영역에 보여줄 이슈 데이터(미리보기)
+  const [issuesItems, setIssuesItems] = useState([]);
 
   useEffect(() => {
     const fetchAllCheckRate = async () => {
       try {
         const response = await proPage.getAllCheckRate();
-        if (response && response.data) {
-          setAllCheckRate(response.data.data);
-        }
+        if (response?.data?.data) setAllCheckRate(response.data.data);
       } catch (error) {
         console.error("Error fetching checklist:", error);
       }
     };
-
     fetchAllCheckRate();
   }, []);
 
-  const handleDeptSelect = (dept) => {
-    setSelectedDept(dept);
-    setDropdownOpen(false);
-  };
+  useEffect(() => {
+    const fetchIssuesList = async () => {
+      try {
+        const res = await proPage.getIssues();
+        if (res?.data?.data && Array.isArray(res.data.data)) {
+          setIssuesItems(res.data.data);
+        } else {
+          setIssuesItems([]);
+        }
+      } catch (e) {
+        console.error("Error fetching issues:", e);
+        setIssuesItems([]);
+      }
+    };
+    fetchIssuesList();
+  }, []);
 
-  const uniqueDepts = [
-    "전체 보기",
-    ...new Set(allCheckRate.map((item) => item.dept)),
-  ];
+  const uniqueDepts = useMemo(
+    () => ["전체 보기", ...new Set(allCheckRate.map((item) => item.dept))],
+    [allCheckRate]
+  );
 
-  const filteredCheckRate =
-    selectedDept !== "전체 보기"
+  const filteredCheckRate = useMemo(() => {
+    return selectedDept !== "전체 보기"
       ? allCheckRate.filter((item) => item.dept === selectedDept)
       : allCheckRate;
+  }, [allCheckRate, selectedDept]);
+
+  // ✅ training_course -> issues[] 맵
+  const issuesByCourse = useMemo(() => {
+    const map = new Map();
+    issuesItems.forEach((courseItem) => {
+      map.set(courseItem.training_course, courseItem.issues || []);
+    });
+    return map;
+  }, [issuesItems]);
+
+  const toggleCourse = (course) => {
+    setOpenCourses((prev) => {
+      const next = new Set(prev);
+      if (next.has(course)) next.delete(course);
+      else next.add(course);
+      return next;
+    });
+  };
+
+  // (선택) 이슈 content를 짧게 미리보기로 보여주고 싶을 때
+  const previewText = (text, max = 140) => {
+    const t = String(text ?? "").replace(/\s+/g, " ").trim();
+    return t.length > max ? `${t.slice(0, max)}…` : t;
+  };
 
   return (
     <Container>
@@ -72,7 +102,13 @@ const TableComponents = ({
           <DropdownIcon />
           <DropdownList isOpen={dropdownOpen}>
             {uniqueDepts.map((dept) => (
-              <DropdownItem key={dept} onClick={() => handleDeptSelect(dept)}>
+              <DropdownItem
+                key={dept}
+                onClick={() => {
+                  setSelectedDept(dept);
+                  setDropdownOpen(false);
+                }}
+              >
                 {dept}
               </DropdownItem>
             ))}
@@ -94,31 +130,85 @@ const TableComponents = ({
           </TableHead>
 
           <tbody>
-            {filteredCheckRate.map((item, index) => {
-              const isActive = selectedCourse === item.training_course;
+            {filteredCheckRate.map((item) => {
+              const course = item.training_course;
+              const isOpen = openCourses.has(course);
+              const isSelected = selectedCourse === course;
+
+              const courseIssues = issuesByCourse.get(course) || [];
 
               return (
-                <TableRow
-                  key={index}
-                  $active={isActive}
-                  onClick={() => {
-                    onSelectCourse?.(item.training_course);
-                  }}
-                  style={{ cursor: "pointer" }}
-                >
-                  <TableCell>{item.training_course}</TableCell>
-                  <TableCell>{item.manager_name}</TableCell>
-                  <TableCell>{item.daily_check_rate}</TableCell>
+                <React.Fragment key={course}>
+                  <TableRow
+                    // ✅ 강조: 열려있거나(토글), 하단 드롭다운에서 선택된 과정이면 강조 유지
+                    // 원치 않으면 $active={isOpen} 로 바꾸면 됨
+                    $active={isOpen || isSelected}
+                    onClick={() => toggleCourse(course)} // ✅ 하단 선택과 분리!
+                    style={{ cursor: "pointer" }}
+                  >
+                    <TableCell>{course}</TableCell>
+                    <TableCell>{item.manager_name}</TableCell>
+                    <TableCell>{item.daily_check_rate}</TableCell>
 
-                  <TableUrgencyCell>
-                    <UrgencyBadge urgent={item.daily_check_rate === "100.0%"}>
-                      {item.daily_check_rate === "100.0%" ? "완수" : "미완수"}
-                    </UrgencyBadge>
-                  </TableUrgencyCell>
+                    <TableUrgencyCell>
+                      <UrgencyBadge urgent={item.daily_check_rate === "100.0%"}>
+                        {item.daily_check_rate === "100.0%" ? "완수" : "미완수"}
+                      </UrgencyBadge>
+                    </TableUrgencyCell>
 
-                  <TableCell>{item.yesterday_check_rate}</TableCell>
-                  <TableCell>{item.overall_check_rate}</TableCell>
-                </TableRow>
+                    <TableCell>{item.yesterday_check_rate}</TableCell>
+                    <TableCell>{item.overall_check_rate}</TableCell>
+                  </TableRow>
+
+                  {/* ✅ 토글 펼침 영역 */}
+                  {isOpen && (
+                    <tr>
+                      <td colSpan={6} style={{ padding: 0 }}>
+                        <div
+                          style={{
+                            padding: "16px 20px",
+                            background: "#fff7ed",
+                            borderBottom: "1px solid #e2e8f0",
+                          }}
+                        >
+                          <div style={{ fontWeight: 700, marginBottom: 10 }}>
+                            {course} 이슈 ({courseIssues.length})
+                          </div>
+
+                          {courseIssues.length === 0 ? (
+                            <div style={{ color: "#666" }}>이슈가 없습니다.</div>
+                          ) : (
+                            <ul style={{ margin: 0, paddingLeft: 18 }}>
+                              {courseIssues.slice(0, 5).map((issue) => (
+                                <li key={issue.id} style={{ marginBottom: 10 }}>
+                                  <div style={{ fontWeight: 600 }}>
+                                    {issue.created_by}
+                                  </div>
+                                  <div style={{ whiteSpace: "pre-wrap" }}>
+                                    {previewText(issue.content)}
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+
+                          {courseIssues.length > 5 && (
+                            <div
+                              style={{
+                                marginTop: 8,
+                                color: "#666",
+                                fontSize: 13,
+                              }}
+                            >
+                              ※ 전체 이슈/댓글/해결 처리는 아래 “이슈사항” 영역에서
+                              진행하세요.
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               );
             })}
           </tbody>
