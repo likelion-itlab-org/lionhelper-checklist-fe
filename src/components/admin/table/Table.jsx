@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   TableWrapper,
-  Title,
   Container,
   Table,
   TableHead,
@@ -19,60 +18,126 @@ import {
   DropdownList,
   TitleWrapper,
 } from "../issues/styles";
-import useCourseStore from "../../../store/useCourseStore";
-import GetIssuesComponent from "../issues/GetIssuesComponent";
-import useAuthStore from "../../../store/useAuthStore";
 
-
-const TableComponents = ({
-  selectedCourse,
-  onSelectCourse,
-}) => {
-  const [taskData, setTaskData] = useState([]);
-  const [selectedDept, setSelectedDept] = useState("전체 보기");
-  const { username, logout } = useAuthStore(); 
+const TableComponents = ({ onSelectCourse }) => {
   const [allCheckRate, setAllCheckRate] = useState([]);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [selectedDept, setSelectedDept] = useState("전체 보기");
+  const [deptDropdownOpen, setDeptDropdownOpen] = useState(false);
+
+  const [openCourses, setOpenCourses] = useState(() => new Set());
+  const [issuesItems, setIssuesItems] = useState([]);
 
   useEffect(() => {
     const fetchAllCheckRate = async () => {
       try {
-        const response = await proPage.getAllCheckRate();
-        if (response && response.data) {
-          setAllCheckRate(response.data.data);
-        }
-      } catch (error) {
-        console.error("Error fetching checklist:", error);
+        const res = await proPage.getAllCheckRate();
+        if (res?.data?.data) setAllCheckRate(res.data.data);
+      } catch (e) {
+        console.error(e);
       }
     };
-
     fetchAllCheckRate();
   }, []);
 
-  const handleDeptSelect = (dept) => {
-    setSelectedDept(dept);
-    setDropdownOpen(false);
+  useEffect(() => {
+    const fetchIssues = async () => {
+      try {
+        const res = await proPage.getIssues();
+        if (res?.data?.data && Array.isArray(res.data.data)) {
+          setIssuesItems(res.data.data);
+        } else {
+          setIssuesItems([]);
+        }
+      } catch (e) {
+        console.error(e);
+        setIssuesItems([]);
+      }
+    };
+    fetchIssues();
+  }, []);
+
+
+  const uniqueDepts = useMemo(
+    () => ["전체 보기", ...new Set(allCheckRate.map((v) => v.dept))],
+    [allCheckRate]
+  );
+
+  const filteredCheckRate = useMemo(() => {
+    return selectedDept === "전체 보기"
+      ? allCheckRate
+      : allCheckRate.filter((v) => v.dept === selectedDept);
+  }, [allCheckRate, selectedDept]);
+
+  const issuesByCourse = useMemo(() => {
+    const map = new Map();
+    issuesItems.forEach((v) => map.set(v.training_course, v.issues || []));
+    return map;
+  }, [issuesItems]);
+
+
+  const toggleCourse = (course) => {
+    setOpenCourses((prev) => {
+      const next = new Set(prev);
+      const willOpen = !next.has(course);
+
+      if (willOpen) {
+        next.add(course);
+        onSelectCourse?.(course); 
+      } else {
+        next.delete(course);
+      }
+
+      return next;
+    });
   };
 
-  const uniqueDepts = [
-    "전체 보기",
-    ...new Set(allCheckRate.map((item) => item.dept)),
-  ];
+  const formatDate = (createdAt) => {
+    if (!createdAt) return "";
+    const d = new Date(createdAt);
+    if (Number.isNaN(d.getTime())) return "";
 
-  const filteredCheckRate =
-    selectedDept !== "전체 보기"
-      ? allCheckRate.filter((item) => item.dept === selectedDept)
-      : allCheckRate;
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${mm}/${dd}`;
+  };
+
+  const DateBadge = ({ text }) => {
+    if (!text) return null;
+    return (
+      <span
+        style={{
+          marginRight: 8,
+          padding: "2px 10px",
+          borderRadius: 9999,
+          background: "#FF7710",
+          color: "#fff",
+          fontSize: 12,
+          fontWeight: 600,
+          whiteSpace: "nowrap",
+        }}
+      >
+        {text}
+      </span>
+    );
+  };
 
   return (
     <Container>
       <TitleWrapper>
-        <DropdownContainer onClick={() => setDropdownOpen(!dropdownOpen)}>
+        <DropdownContainer
+          onClick={() => setDeptDropdownOpen(!deptDropdownOpen)}
+        >
           {selectedDept}
           <DropdownIcon />
-          <DropdownList isOpen={dropdownOpen}>
+          <DropdownList isOpen={deptDropdownOpen}>
             {uniqueDepts.map((dept) => (
-              <DropdownItem key={dept} onClick={() => handleDeptSelect(dept)}>
+              <DropdownItem
+                key={dept}
+                onClick={() => {
+                  setSelectedDept(dept);
+                  setDeptDropdownOpen(false);
+                }}
+              >
                 {dept}
               </DropdownItem>
             ))}
@@ -94,31 +159,104 @@ const TableComponents = ({
           </TableHead>
 
           <tbody>
-            {filteredCheckRate.map((item, index) => {
-              const isActive = selectedCourse === item.training_course;
+            {filteredCheckRate.map((item) => {
+              const course = item.training_course;
+              const isOpen = openCourses.has(course);
+              const issues = issuesByCourse.get(course) || [];
 
               return (
-                <TableRow
-                  key={index}
-                  $active={isActive}
-                  onClick={() => {
-                    onSelectCourse?.(item.training_course);
-                  }}
-                  style={{ cursor: "pointer" }}
-                >
-                  <TableCell>{item.training_course}</TableCell>
-                  <TableCell>{item.manager_name}</TableCell>
-                  <TableCell>{item.daily_check_rate}</TableCell>
+                <React.Fragment key={course}>
+                  <TableRow
+                    $active={isOpen}
+                    onClick={() => toggleCourse(course)}
+                    style={{ cursor: "pointer" }}
+                  >
+                    <TableCell>{course}</TableCell>
+                    <TableCell>{item.manager_name}</TableCell>
+                    <TableCell>{item.daily_check_rate}</TableCell>
+                    <TableUrgencyCell>
+                      <UrgencyBadge urgent={item.daily_check_rate === "100.0%"}>
+                        {item.daily_check_rate === "100.0%" ? "완수" : "미완수"}
+                      </UrgencyBadge>
+                    </TableUrgencyCell>
+                    <TableCell>{item.yesterday_check_rate}</TableCell>
+                    <TableCell>{item.overall_check_rate}</TableCell>
+                  </TableRow>
 
-                  <TableUrgencyCell>
-                    <UrgencyBadge urgent={item.daily_check_rate === "100.0%"}>
-                      {item.daily_check_rate === "100.0%" ? "완수" : "미완수"}
-                    </UrgencyBadge>
-                  </TableUrgencyCell>
+                  {isOpen && (
+                    <tr>
+                      <td colSpan={6} style={{ padding: 0 }}>
+                        <div
+                          style={{
+                            padding: 24,
+                            background: "#fff7ed",
+                            borderBottom: "1px solid #e2e8f0",
+                          }}
+                        >
 
-                  <TableCell>{item.yesterday_check_rate}</TableCell>
-                  <TableCell>{item.overall_check_rate}</TableCell>
-                </TableRow>
+                          {issues.length === 0 ? (
+                            <div style={{ color: "#666" }}>이슈가 없습니다.</div>
+                          ) : (
+                            <ul
+                              style={{
+                                listStyle: "none",
+                                paddingLeft: 0,
+                                margin: 0,
+                              }}
+                            >
+                              {issues.slice(0, 5).map((issue, idx) => (
+                                <li
+                                  key={issue.id}
+                                  style={{
+                                    paddingTop: idx === 0 ? 0 : 12,
+                                    marginTop: idx === 0 ? 0 : 12,
+                                    borderTop:
+                                      idx === 0 ? "none" : "1px solid #E5E7EB",
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      fontWeight: 600,
+                                      marginBottom: 4,
+                                    }}
+                                  >
+                                    <DateBadge text={formatDate(issue.created_at)} />
+                                    {issue.created_by}
+                                  </div>
+
+                                  <div
+                                    style={{
+                                      whiteSpace: "pre-wrap",
+                                      wordBreak: "break-word",
+                                      lineHeight: 1.6,
+                                    }}
+                                  >
+                                    {issue.content}
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+
+                          {issues.length > 5 && (
+                            <div
+                              style={{
+                                marginTop: 10,
+                                color: "#666",
+                                fontSize: 13,
+                              }}
+                            >
+                              ※ 나머지 이슈/댓글/해결 처리는 아래 “이슈사항”에서
+                              확인하세요.
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               );
             })}
           </tbody>
