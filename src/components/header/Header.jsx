@@ -61,19 +61,19 @@ const Header = () => {
     //   icon: <BiBarChart />,
     //   path: "/app/dashboard/weekly",
     // },
-    {
-      id: "laboratory",
-      label: "AI 실험실",
-      icon: <ImLab />,
-      path: "/app/laboratory",
-    },
-    {
-      id: "recruitment_status",
-      label: "모집현황",
-      icon: <BiBarChart />,
-      path: "https://bootapplication.onrender.com/",
-      isExternal: true,
-    },
+    // {
+    //   id: "laboratory",
+    //   label: "AI 실험실",
+    //   icon: <ImLab />,
+    //   path: "/app/laboratory",
+    // },
+    // {
+    //   id: "recruitment_status",
+    //   label: "모집현황",
+    //   icon: <BiBarChart />,
+    //   path: "https://bootapplication.onrender.com/",
+    //   isExternal: true,
+    // },
   ];
 
   // 초기 active 상태 설정
