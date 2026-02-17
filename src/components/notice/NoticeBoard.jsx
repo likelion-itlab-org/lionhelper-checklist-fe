@@ -1,8 +1,9 @@
+// NoticeBoard.jsx
 import React, { useState, useEffect } from "react";
 import { SearchBox, SearchInput, SearchIcon } from "../notification/styles";
 import { FaSearch } from "react-icons/fa";
-import { FiMoreVertical } from "react-icons/fi"; // 세로 점 아이콘
-import { IoMdAdd } from "react-icons/io"; // 추가 아이콘
+import { FiMoreVertical } from "react-icons/fi";
+import { IoMdAdd } from "react-icons/io";
 import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { proPage } from "../../apis/api";
@@ -31,7 +32,9 @@ import {
   MenuWrapper,
 } from "./styles";
 
-// 모달 관련 스타일 컴포넌트 추가
+/* =========================
+   Modal styles (inline)
+========================= */
 const ModalOverlay = styled.div`
   position: fixed;
   top: 0;
@@ -75,7 +78,6 @@ const ModalButton = styled.button`
   color: ${(props) => (props.confirm ? "white" : "#FF7710")};
 `;
 
-// 삭제 확인 모달 컴포넌트
 const DeleteConfirmModal = ({ isOpen, onClose, onConfirm }) => {
   if (!isOpen) return null;
 
@@ -96,67 +98,54 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm }) => {
 
 const NoticeBoard = () => {
   const [openIndex, setOpenIndex] = useState(null);
-  const [isOpen, setIsOpen] = useState(false);
   const [notices, setNotices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Zustand에서 username 가져오기
   const username = useAuthStore((state) => state.username);
-  // 세션 스토리지에서 직접 username 가져오기 (백업)
   const [sessionUsername, setSessionUsername] = useState(null);
 
-  // 컴포넌트 마운트 시 세션 스토리지에서 username 가져오기
   useEffect(() => {
     const storedUsername = sessionStorage.getItem("username");
     if (storedUsername) {
       setSessionUsername(storedUsername);
-      // Zustand 스토어에도 업데이트
       useAuthStore.getState().setUsername(storedUsername);
     }
   }, []);
 
-  // username 또는 sessionUsername 중 하나를 사용
   const currentUsername = username || sessionUsername;
   const isAdmin =
     currentUsername === "장지연" ||
     currentUsername === "김은지" ||
+    currentUsername === "test" ||
     currentUsername === "김슬기";
-
-  // 디버깅을 위한 콘솔 로그 추가
-  useEffect(() => {
-    // console.log("현재 로그인한 사용자 (Zustand):", username);
-    // console.log("현재 로그인한 사용자 (세션):", sessionUsername);
-    // console.log("최종 사용자 이름:", currentUsername);
-    // console.log("관리자 권한 여부:", isAdmin);
-  }, [username, sessionUsername, currentUsername, isAdmin]);
 
   const [query, setQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [showMenuIndex, setShowMenuIndex] = useState(null);
   const [activeFilter, setActiveFilter] = useState("전체");
 
-  // 공지사항 데이터 가져오기
   useEffect(() => {
     const fetchNotices = async () => {
       setLoading(true);
+      setError(null);
+
       try {
         const response = await proPage.getNotice();
-        // API 응답 구조에 맞게 데이터 설정
-        if (response && response.data && response.data.data) {
-          // 각 공지사항의 날짜 필드 확인
-          const noticesWithDates = response.data.data.map((notice) => {
-            return notice;
-          });
-          setNotices(noticesWithDates);
-        } else {
-          setError("데이터를 불러오는데 실패했습니다.");
-          setNotices([]); // 빈 배열로 초기화
-        }
+
+        const payload = response?.data?.data;
+
+        const list = Array.isArray(payload)
+          ? payload
+          : Array.isArray(payload?.list)
+          ? payload.list
+          : [];
+
+        setNotices(list);
       } catch (error) {
         console.error("공지사항 데이터 가져오기 오류:", error);
         setError("데이터를 불러오는데 실패했습니다.");
-        setNotices([]); // 오류 발생 시 빈 배열로 초기화
+        setNotices([]);
       } finally {
         setLoading(false);
       }
@@ -165,25 +154,24 @@ const NoticeBoard = () => {
     fetchNotices();
   }, []);
 
-  // 필터링된 공지사항
+
   const filteredNotices = Array.isArray(notices)
     ? notices.filter((notice) => {
-        // 검색어 필터링
-        const matchesSearch =
-          notice.title.toLowerCase().includes(query.toLowerCase()) ||
-          (notice.content &&
-            notice.content.toLowerCase().includes(query.toLowerCase()));
+        const q = (query ?? "").toLowerCase();
 
-        // 카테고리 필터링
+        const title = (notice?.title ?? "").toLowerCase();
+        const content = (notice?.content ?? "").toLowerCase();
+
+        const matchesSearch = title.includes(q) || content.includes(q);
         const matchesCategory =
-          activeFilter === "전체" || notice.type === activeFilter;
+          activeFilter === "전체" || notice?.type === activeFilter;
 
         return matchesSearch && matchesCategory;
       })
     : [];
 
   const noticesPerPage = 6;
-  const totalPages = Math.ceil(filteredNotices.length / noticesPerPage);
+  const totalPages = Math.ceil(filteredNotices.length / noticesPerPage) || 1;
   const startIndex = (currentPage - 1) * noticesPerPage;
   const currentNotices = filteredNotices.slice(
     startIndex,
@@ -194,27 +182,22 @@ const NoticeBoard = () => {
     setOpenIndex(openIndex === index ? null : index);
   };
 
-  // 메뉴 외부 클릭 시 닫기 처리
+  // 메뉴 외부 클릭 시 닫기
   useEffect(() => {
     const handleClickOutside = (event) => {
-      // 메뉴 버튼이나 메뉴 자체를 클릭한 경우는 무시
       if (
         event.target.closest(".menu-wrapper") ||
         event.target.closest(".menu-button")
       ) {
         return;
       }
-
-      // 메뉴가 열려있는 경우에만 닫기
       if (showMenuIndex !== null) {
         setShowMenuIndex(null);
       }
     };
 
     document.addEventListener("click", handleClickOutside);
-    return () => {
-      document.removeEventListener("click", handleClickOutside);
-    };
+    return () => document.removeEventListener("click", handleClickOutside);
   }, [showMenuIndex]);
 
   const toggleMenu = (index, e) => {
@@ -225,7 +208,7 @@ const NoticeBoard = () => {
   const navigate = useNavigate();
 
   const handleEdit = (id) => {
-    const notice = notices.find((notice) => notice.id === id);
+    const notice = notices.find((n) => n.id === id);
     if (notice) {
       navigate("create", {
         state: {
@@ -255,12 +238,10 @@ const NoticeBoard = () => {
       const response = await proPage.deleteNotice(deleteTargetId);
       console.log("삭제 응답:", response);
 
-      // 응답 구조에 관계없이 성공 여부 확인
       if (
         response &&
         (response.status === 200 || response.status === 204 || response.data)
       ) {
-        // 삭제 성공 시 목록 새로고침
         const updatedNotices = notices.filter(
           (notice) => notice.id !== deleteTargetId
         );
@@ -288,31 +269,26 @@ const NoticeBoard = () => {
     navigate("create");
   };
 
-  // 검색 처리
   const handleSearch = () => {
-    setCurrentPage(1); // 검색 시 첫 페이지로 이동
+    setCurrentPage(1);
   };
 
-  // 필터 변경 시 페이지 초기화
   const handleFilterChange = (filter) => {
     setActiveFilter(filter);
     setCurrentPage(1);
   };
 
-  // 날짜 포맷팅 함수 추가 (컴포넌트 내부에 추가)
   const formatDate = (dateString) => {
     if (!dateString) return "";
-
     try {
       const date = new Date(dateString);
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, "0");
       const day = String(date.getDate()).padStart(2, "0");
-
       return `${year}-${month}-${day}`;
-    } catch (error) {
-      console.error("날짜 포맷팅 오류:", error);
-      return dateString; // 오류 발생 시 원본 문자열 반환
+    } catch (e) {
+      console.error("날짜 포맷팅 오류:", e);
+      return dateString;
     }
   };
 
@@ -327,55 +303,31 @@ const NoticeBoard = () => {
           </RegisterButton>
         )}
       </Title>
+
       <SearchBox width="400px" height="50px">
         <SearchInput
           placeholder="검색어를 입력하세요"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSearch()} // Enter 키 입력 처리
+          onKeyDown={(e) => e.key === "Enter" && handleSearch()}
         />
         <SearchIcon onClick={handleSearch}>
           <FaSearch />
         </SearchIcon>
-      </SearchBox>{" "}
+      </SearchBox>
+
       <FilterButtons>
-        <FilterButton
-          active={activeFilter === "전체"}
-          onClick={() => handleFilterChange("전체")}
-        >
-          전체
-        </FilterButton>
-        <FilterButton
-          active={activeFilter === "출결"}
-          onClick={() => handleFilterChange("출결")}
-        >
-          출결
-        </FilterButton>
-        <FilterButton
-          active={activeFilter === "공결"}
-          onClick={() => handleFilterChange("공결")}
-        >
-          공결
-        </FilterButton>
-        <FilterButton
-          active={activeFilter === "훈련장려금"}
-          onClick={() => handleFilterChange("훈련장려금")}
-        >
-          훈련장려금
-        </FilterButton>
-        <FilterButton
-          active={activeFilter === "규정"}
-          onClick={() => handleFilterChange("규정")}
-        >
-          규정
-        </FilterButton>
-        <FilterButton
-          active={activeFilter === "긴급"}
-          onClick={() => handleFilterChange("긴급")}
-        >
-          긴급
-        </FilterButton>
+        {["전체", "출결", "공결", "훈련장려금", "규정", "긴급"].map((f) => (
+          <FilterButton
+            key={f}
+            active={activeFilter === f}
+            onClick={() => handleFilterChange(f)}
+          >
+            {f}
+          </FilterButton>
+        ))}
       </FilterButtons>
+
       {loading ? (
         <div style={{ textAlign: "center", padding: "20px" }}>로딩 중...</div>
       ) : error ? (
@@ -389,14 +341,16 @@ const NoticeBoard = () => {
       ) : (
         <NoticeList>
           {currentNotices.map((notice, index) => (
-            <NoticeItem key={notice.id} active={showMenuIndex === index}>
+            <NoticeItem key={notice.id ?? index} active={showMenuIndex === index}>
               <NoticeHeader onClick={() => toggleDetails(index)}>
                 {index + 1}. <Badge>{notice.type}</Badge>
                 <NoticeTitle>{notice.title}</NoticeTitle>
                 <ToggleButton>{openIndex === index ? "▲" : "▼"}</ToggleButton>
+
                 {isAdmin && (
                   <MenuWrapper className="menu-wrapper">
                     <Button
+                      className="menu-button"
                       onClick={(e) => {
                         e.stopPropagation();
                         toggleMenu(index, e);
@@ -404,6 +358,7 @@ const NoticeBoard = () => {
                     >
                       <FiMoreVertical size={24} />
                     </Button>
+
                     {showMenuIndex === index && (
                       <Menu>
                         <MenuButton
@@ -427,6 +382,7 @@ const NoticeBoard = () => {
                   </MenuWrapper>
                 )}
               </NoticeHeader>
+
               {openIndex === index && (
                 <NoticeDetails className="notice-details-content">
                   <div
@@ -438,6 +394,7 @@ const NoticeBoard = () => {
                   >
                     {notice.content}
                   </div>
+
                   <div
                     style={{
                       marginTop: "10px",
@@ -449,9 +406,8 @@ const NoticeBoard = () => {
                       gap: "15px",
                     }}
                   >
-                    {notice.created_by && (
-                      <span>작성자: {notice.created_by}</span>
-                    )}
+                    {notice.created_by && <span>작성자: {notice.created_by}</span>}
+
                     {(notice.created_at ||
                       notice.createdAt ||
                       notice.date ||
@@ -474,7 +430,7 @@ const NoticeBoard = () => {
           ))}
         </NoticeList>
       )}
-      {/* 페이지네이션 */}
+
       {!loading && !error && filteredNotices.length > 0 && (
         <PaginationWrapper>
           <PageButton
@@ -484,17 +440,17 @@ const NoticeBoard = () => {
             ◀ 이전
           </PageButton>
           <span>
-            {currentPage} / {totalPages}
+            {currentPage} / {Math.ceil(filteredNotices.length / noticesPerPage) || 1}
           </span>
           <PageButton
             onClick={() => setCurrentPage(currentPage + 1)}
-            disabled={currentPage === totalPages}
+            disabled={currentPage === Math.ceil(filteredNotices.length / noticesPerPage)}
           >
             다음 ▶
           </PageButton>
         </PaginationWrapper>
       )}
-      {/* 모달 추가 */}
+
       <DeleteConfirmModal
         isOpen={isDeleteModalOpen}
         onClose={handleDeleteCancel}

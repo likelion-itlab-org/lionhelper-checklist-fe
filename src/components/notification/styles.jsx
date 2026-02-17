@@ -16,17 +16,17 @@ const Title = styled.h1`
 const SearchBox = styled.div`
   display: flex;
   align-items: center;
-  width: ${(props) => props.width || "730px"}; /* 기본값을 730px로 설정 */
+  width: ${(props) => props.width || "730px"};
   height: ${(props) => props.height || "70px"};
   background-color: white;
-  border: 1px solid #d3d3d3; /* 연한 회색 테두리 */
+  border: 1px solid #d3d3d3;
   border-radius: 30px;
   padding: 0 30px;
   margin-top: 30px;
   margin-bottom: 40px;
 
   @media (max-width: 768px) {
-    width: 90%; /* 태블릿에서 넓이 유동적으로 조정 */
+    width: 90%;
   }
 `;
 
@@ -71,6 +71,14 @@ const NotiText = styled.div`
   color: #000;
 `;
 
+const EmptyText = styled.div`
+  text-align: center;
+  margin-top: 60px;
+  font-size: 18px;
+  font-family: "Pretandard", sans-serif;
+  color: #9e9e9e;
+`;
+
 const QuestionBox = styled.div`
   display: flex;
   justify-content: space-between;
@@ -97,7 +105,6 @@ const ToggleIcon = styled.div`
 
 const AnswerBox = styled.div`
   width: 715px;
-  height: 30%;
   border-radius: 10px;
   background-color: #f6f6f6;
   margin: 10px 0 20px;
@@ -150,4 +157,5 @@ export {
   PaginationContainer,
   PageButton,
   NotiText,
+  EmptyText,
 };
