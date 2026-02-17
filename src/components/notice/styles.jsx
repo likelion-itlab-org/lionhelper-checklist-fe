@@ -65,6 +65,7 @@ const FilterButtons = styled.div`
   width: 100%;
   max-width: 800px;
   flex-wrap: wrap;
+  justify-content: center;
 `;
 
 const FilterButton = styled.button`

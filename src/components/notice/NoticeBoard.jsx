@@ -102,7 +102,6 @@ const NoticeBoard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // ✅ username
   const username = useAuthStore((state) => state.username);
   const [sessionUsername, setSessionUsername] = useState(null);
 
@@ -118,6 +117,7 @@ const NoticeBoard = () => {
   const isAdmin =
     currentUsername === "장지연" ||
     currentUsername === "김은지" ||
+    currentUsername === "test" ||
     currentUsername === "김슬기";
 
   const [query, setQuery] = useState("");
@@ -125,9 +125,6 @@ const NoticeBoard = () => {
   const [showMenuIndex, setShowMenuIndex] = useState(null);
   const [activeFilter, setActiveFilter] = useState("전체");
 
-  /* =========================
-     ✅ 공지사항 데이터 가져오기 (FIXED)
-  ========================= */
   useEffect(() => {
     const fetchNotices = async () => {
       setLoading(true);
@@ -136,20 +133,8 @@ const NoticeBoard = () => {
       try {
         const response = await proPage.getNotice();
 
-        // 디버깅 로그
-        console.log("raw response:", response);
-        console.log("response.data:", response?.data);
-        console.log("response.data.data:", response?.data?.data);
-        console.log(
-          "type:",
-          typeof response?.data?.data,
-          "isArray:",
-          Array.isArray(response?.data?.data)
-        );
-
         const payload = response?.data?.data;
 
-        // ✅ 다양한 응답 형태 안전 처리
         const list = Array.isArray(payload)
           ? payload
           : Array.isArray(payload?.list)
@@ -169,9 +154,7 @@ const NoticeBoard = () => {
     fetchNotices();
   }, []);
 
-  /* =========================
-     ✅ 필터링된 공지사항 (NULL SAFE)
-  ========================= */
+
   const filteredNotices = Array.isArray(notices)
     ? notices.filter((notice) => {
         const q = (query ?? "").toLowerCase();
