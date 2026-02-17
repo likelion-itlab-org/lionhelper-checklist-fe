@@ -9,6 +9,30 @@ import {
   TableHeader,
   TableUrgencyCell,
   UrgencyBadge,
+  ClickableRow,
+  ExpandedArea,
+  EmptyText,
+  IssuesList,
+  IssueItem,
+  IssueHeaderRow,
+  DateBadge,
+  IssueContent,
+  CommentToggleRow,
+  CommentToggleButton,
+  Chevron,
+  CommentsBox,
+  CommentsLoadingText,
+  CommentsEmptyText,
+  CommentsList,
+  CommentItem,
+  CommentMetaRow,
+  CommentAuthor,
+  CommentDate,
+  CommentBody,
+  CommentFormRow,
+  CommentInput,
+  CommentSubmitButton,
+  HintText,
 } from "./styles";
 import { proPage } from "../../../apis/api";
 import {
@@ -18,14 +42,24 @@ import {
   DropdownList,
   TitleWrapper,
 } from "../issues/styles";
+import useAuthStore from "../../../store/useAuthStore";
 
 const TableComponents = ({ onSelectCourse }) => {
+  const { username } = useAuthStore();
+
   const [allCheckRate, setAllCheckRate] = useState([]);
   const [selectedDept, setSelectedDept] = useState("전체 보기");
   const [deptDropdownOpen, setDeptDropdownOpen] = useState(false);
 
   const [openCourses, setOpenCourses] = useState(() => new Set());
   const [issuesItems, setIssuesItems] = useState([]);
+
+  const [openComments, setOpenComments] = useState(() => new Set());
+  const [issueCommentsMap, setIssueCommentsMap] = useState({});
+  const [loadingComments, setLoadingComments] = useState({});
+
+  const [commentInputs, setCommentInputs] = useState({});
+  const [submitting, setSubmitting] = useState({});
 
   useEffect(() => {
     const fetchAllCheckRate = async () => {
@@ -56,7 +90,6 @@ const TableComponents = ({ onSelectCourse }) => {
     fetchIssues();
   }, []);
 
-
   const uniqueDepts = useMemo(
     () => ["전체 보기", ...new Set(allCheckRate.map((v) => v.dept))],
     [allCheckRate]
@@ -74,7 +107,6 @@ const TableComponents = ({ onSelectCourse }) => {
     return map;
   }, [issuesItems]);
 
-
   const toggleCourse = (course) => {
     setOpenCourses((prev) => {
       const next = new Set(prev);
@@ -82,58 +114,109 @@ const TableComponents = ({ onSelectCourse }) => {
 
       if (willOpen) {
         next.add(course);
-        onSelectCourse?.(course); 
+        onSelectCourse?.(course);
       } else {
         next.delete(course);
+        setOpenComments(new Set());
       }
-
       return next;
     });
   };
 
-  const formatDate = (createdAt) => {
+  const formatMMDD = (createdAt) => {
     if (!createdAt) return "";
     const d = new Date(createdAt);
     if (Number.isNaN(d.getTime())) return "";
-
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
-    return `${mm}/${dd}`;
+    return `${d.getMonth() + 1}/${d.getDate()}`;
   };
 
-  const DateBadge = ({ text }) => {
-    if (!text) return null;
-    return (
-      <span
-        style={{
-          marginRight: 8,
-          padding: "2px 10px",
-          borderRadius: 9999,
-          background: "#FF7710",
-          color: "#fff",
-          fontSize: 12,
-          fontWeight: 600,
-          whiteSpace: "nowrap",
-        }}
-      >
-        {text}
-      </span>
-    );
+  const fetchIssueComments = async (issueId) => {
+    try {
+      setLoadingComments((prev) => ({ ...prev, [issueId]: true }));
+      const res = await proPage.getComments({ params: { issue_id: issueId } });
+      const list = Array.isArray(res?.data?.data) ? res.data.data : [];
+      setIssueCommentsMap((prev) => ({ ...prev, [issueId]: list }));
+    } catch (e) {
+      console.error(e);
+      setIssueCommentsMap((prev) => ({ ...prev, [issueId]: [] }));
+    } finally {
+      setLoadingComments((prev) => ({ ...prev, [issueId]: false }));
+    }
+  };
+
+  const toggleIssueComments = async (e, issueId) => {
+    e.stopPropagation();
+
+    setOpenComments((prev) => {
+      const next = new Set(prev);
+      if (next.has(issueId)) next.delete(issueId);
+      else next.add(issueId);
+      return next;
+    });
+
+    if (!issueCommentsMap[issueId]) {
+      await fetchIssueComments(issueId);
+    }
+  };
+
+  const onChangeCommentInput = (issueId, value) => {
+    setCommentInputs((prev) => ({ ...prev, [issueId]: value }));
+  };
+
+  const handleSubmitComment = async (e, issueId) => {
+    e.stopPropagation();
+
+    const text = (commentInputs[issueId] || "").trim();
+    if (!text) return;
+
+    try {
+      setSubmitting((prev) => ({ ...prev, [issueId]: true }));
+
+      const res = await proPage.postComments({
+        issue_id: issueId,
+        comment: text,
+        username: username,
+      });
+
+      if (!(res.status === 200 || res.status === 201)) {
+        alert("댓글 저장에 실패했습니다.");
+        return;
+      }
+
+      const newComment = {
+        created_by: username,
+        comment: text,
+        created_at: new Date().toISOString(),
+      };
+
+      setIssueCommentsMap((prev) => ({
+        ...prev,
+        [issueId]: [...(prev[issueId] || []), newComment],
+      }));
+
+      setCommentInputs((prev) => ({ ...prev, [issueId]: "" }));
+
+      await fetchIssueComments(issueId);
+    } catch (err) {
+      console.error(err);
+      alert("네트워크 오류가 발생했습니다.");
+    } finally {
+      setSubmitting((prev) => ({ ...prev, [issueId]: false }));
+    }
   };
 
   return (
     <Container>
       <TitleWrapper>
-        <DropdownContainer
-          onClick={() => setDeptDropdownOpen(!deptDropdownOpen)}
-        >
+        <DropdownContainer onClick={() => setDeptDropdownOpen(!deptDropdownOpen)}>
           {selectedDept}
           <DropdownIcon />
           <DropdownList isOpen={deptDropdownOpen}>
             {uniqueDepts.map((dept) => (
               <DropdownItem
                 key={dept}
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   setSelectedDept(dept);
                   setDeptDropdownOpen(false);
                 }}
@@ -166,11 +249,7 @@ const TableComponents = ({ onSelectCourse }) => {
 
               return (
                 <React.Fragment key={course}>
-                  <TableRow
-                    $active={isOpen}
-                    onClick={() => toggleCourse(course)}
-                    style={{ cursor: "pointer" }}
-                  >
+                  <ClickableRow $active={isOpen} onClick={() => toggleCourse(course)}>
                     <TableCell>{course}</TableCell>
                     <TableCell>{item.manager_name}</TableCell>
                     <TableCell>{item.daily_check_rate}</TableCell>
@@ -181,78 +260,104 @@ const TableComponents = ({ onSelectCourse }) => {
                     </TableUrgencyCell>
                     <TableCell>{item.yesterday_check_rate}</TableCell>
                     <TableCell>{item.overall_check_rate}</TableCell>
-                  </TableRow>
+                  </ClickableRow>
 
                   {isOpen && (
                     <tr>
                       <td colSpan={6} style={{ padding: 0 }}>
-                        <div
-                          style={{
-                            padding: 24,
-                            background: "#fff7ed",
-                            borderBottom: "1px solid #e2e8f0",
-                          }}
-                        >
-
+                        <ExpandedArea>
                           {issues.length === 0 ? (
-                            <div style={{ color: "#666" }}>이슈가 없습니다.</div>
+                            <EmptyText>이슈가 없습니다.</EmptyText>
                           ) : (
-                            <ul
-                              style={{
-                                listStyle: "none",
-                                paddingLeft: 0,
-                                margin: 0,
-                              }}
-                            >
-                              {issues.slice(0, 5).map((issue, idx) => (
-                                <li
-                                  key={issue.id}
-                                  style={{
-                                    paddingTop: idx === 0 ? 0 : 12,
-                                    marginTop: idx === 0 ? 0 : 12,
-                                    borderTop:
-                                      idx === 0 ? "none" : "1px solid #E5E7EB",
-                                  }}
-                                >
-                                  <div
-                                    style={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      fontWeight: 600,
-                                      marginBottom: 4,
-                                    }}
-                                  >
-                                    <DateBadge text={formatDate(issue.created_at)} />
-                                    {issue.created_by}
-                                  </div>
+                            <IssuesList>
+                              {issues.slice(0, 5).map((issue) => {
+                                const issueId = issue.id;
+                                const isCommentsOpen = openComments.has(issueId);
+                                const comments = issueCommentsMap[issueId] || [];
+                                const isLoading = !!loadingComments[issueId];
 
-                                  <div
-                                    style={{
-                                      whiteSpace: "pre-wrap",
-                                      wordBreak: "break-word",
-                                      lineHeight: 1.6,
-                                    }}
-                                  >
-                                    {issue.content}
-                                  </div>
-                                </li>
-                              ))}
-                            </ul>
-                          )}
+                                const commentCount =
+                                  typeof issue.comments?.length === "number"
+                                    ? issue.comments.length
+                                    : issueCommentsMap[issueId]?.length ?? 0;
 
-                          {issues.length > 5 && (
-                            <div
-                              style={{
-                                marginTop: 10,
-                                color: "#666",
-                                fontSize: 13,
-                              }}
-                            >
-                              ※ 나머지 이슈/댓글/해결 처리는 아래 “이슈사항”에서
-                              확인하세요.
-                            </div>
+                                return (
+                                  <IssueItem key={issueId}>
+                                    <IssueHeaderRow>
+                                      <DateBadge>{formatMMDD(issue.created_at)}</DateBadge>
+                                      {issue.created_by}
+                                    </IssueHeaderRow>
+
+                                    <IssueContent>{issue.content}</IssueContent>
+
+                                    <CommentToggleRow>
+                                      <CommentToggleButton
+                                        type="button"
+                                        onClick={(e) => toggleIssueComments(e, issueId)}
+                                      >
+                                        <Chevron>{isCommentsOpen ? "▾" : "▸"}</Chevron>
+                                        <span>댓글 {commentCount}개</span>
+                                      </CommentToggleButton>
+                                    </CommentToggleRow>
+
+                                    {isCommentsOpen && (
+                                      <CommentsBox onClick={(e) => e.stopPropagation()}>
+                                        {isLoading ? (
+                                          <CommentsLoadingText>댓글 불러오는 중...</CommentsLoadingText>
+                                        ) : comments.length === 0 ? (
+                                          <CommentsEmptyText>댓글이 없습니다.</CommentsEmptyText>
+                                        ) : (
+                                          <CommentsList>
+                                            {comments.map((c, i) => {
+                                              const author = c.created_by ?? c.author ?? "익명";
+                                              const dateText = c.created_at
+                                                ? formatMMDD(c.created_at)
+                                                : "";
+
+                                              return (
+                                                <CommentItem key={`${issueId}-c-${i}`}>
+                                                  <CommentMetaRow>
+                                                    <CommentAuthor title={author}>{author}</CommentAuthor>
+                                                    {!!dateText && <CommentDate>{dateText}</CommentDate>}
+                                                  </CommentMetaRow>
+                                                  <CommentBody>{c.comment}</CommentBody>
+                                                </CommentItem>
+                                              );
+                                            })}
+                                          </CommentsList>
+                                        )}
+
+                                        <CommentFormRow>
+                                          <CommentInput
+                                            value={commentInputs[issueId] || ""}
+                                            onChange={(e) =>
+                                              onChangeCommentInput(issueId, e.target.value)
+                                            }
+                                            placeholder="댓글을 입력하세요"
+                                            onKeyDown={(e) => {
+                                              if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+                                                handleSubmitComment(e, issueId);
+                                              }
+                                            }}
+                                          />
+                                          <CommentSubmitButton
+                                            type="button"
+                                            disabled={!!submitting[issueId]}
+                                            onClick={(e) => handleSubmitComment(e, issueId)}
+                                          >
+                                            {submitting[issueId] ? "작성 중..." : "댓글 작성"}
+                                          </CommentSubmitButton>
+                                        </CommentFormRow>
+
+                                        <HintText>⌘/Ctrl + Enter 로 빠르게 등록 가능</HintText>
+                                      </CommentsBox>
+                                    )}
+                                  </IssueItem>
+                                );
+                              })}
+                            </IssuesList>
                           )}
-                        </div>
+                        </ExpandedArea>
                       </td>
                     </tr>
                   )}
