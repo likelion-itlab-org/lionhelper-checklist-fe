@@ -4,9 +4,10 @@ import { FaSearch } from "react-icons/fa";
 import { FiMoreVertical } from "react-icons/fi";
 import { IoMdAdd } from "react-icons/io";
 import { useNavigate } from "react-router-dom";
-import styled from "styled-components";
 import { proPage } from "../../apis/api";
 import useAuthStore from "../../store/useAuthStore";
+
+import DeleteConfirmModal from "../modal/DeleteConfirmModal"; 
 
 import {
   Container,
@@ -28,67 +29,6 @@ import {
   Button,
   MenuWrapper,
 } from "./styles";
-
-const ModalOverlay = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-`;
-
-const ModalContent = styled.div`
-  background-color: white;
-  padding: 20px;
-  border-radius: 8px;
-  width: 300px;
-  text-align: center;
-`;
-
-const ModalText = styled.p`
-  margin: 20px 0;
-  font-size: 16px;
-`;
-
-const ButtonGroup = styled.div`
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-`;
-
-const ModalButton = styled.button`
-  padding: 8px 20px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 500;
-
-  background-color: ${(props) => (props.confirm ? "#ff7710" : "#fffaf5")};
-  color: ${(props) => (props.confirm ? "white" : "#ff7710")};
-`;
-
-const DeleteConfirmModal = ({ isOpen, onClose, onConfirm }) => {
-  if (!isOpen) return null;
-
-  return (
-    <ModalOverlay>
-      <ModalContent>
-        <ModalText>정말 삭제하시겠습니까?</ModalText>
-        <ButtonGroup>
-          <ModalButton confirm onClick={onConfirm}>
-            예
-          </ModalButton>
-          <ModalButton onClick={onClose}>아니오</ModalButton>
-        </ButtonGroup>
-      </ModalContent>
-    </ModalOverlay>
-  );
-};
 
 const NoticeBoard = () => {
   const [openIndex, setOpenIndex] = useState(null);
@@ -127,7 +67,6 @@ const NoticeBoard = () => {
       try {
         const response = await proPage.getNotice();
         const list = response?.data?.data?.data;
-
         setNotices(Array.isArray(list) ? list : []);
       } catch (err) {
         console.error("공지사항 데이터 가져오기 오류:", err);
@@ -419,13 +358,19 @@ const NoticeBoard = () => {
 
       {!loading && !error && filteredNotices.length > 0 && (
         <PaginationWrapper>
-          <PageButton onClick={() => setCurrentPage((p) => p - 1)} disabled={!canPrev}>
+          <PageButton
+            onClick={() => setCurrentPage((p) => p - 1)}
+            disabled={!canPrev}
+          >
             ◀ 이전
           </PageButton>
           <span>
             {currentPage} / {totalPages}
           </span>
-          <PageButton onClick={() => setCurrentPage((p) => p + 1)} disabled={!canNext}>
+          <PageButton
+            onClick={() => setCurrentPage((p) => p + 1)}
+            disabled={!canNext}
+          >
             다음 ▶
           </PageButton>
         </PaginationWrapper>
