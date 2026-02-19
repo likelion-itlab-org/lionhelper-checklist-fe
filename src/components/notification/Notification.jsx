@@ -25,29 +25,30 @@ const Notification = () => {
   const [openAnswers, setOpenAnswers] = useState([]);
   const [isSearched, setIsSearched] = useState(false);
 
-  useEffect(() => {
-    const getNoticeData = async () => {
-      try {
-        const response = await helper.getNotice();
-        const list = response?.data?.data;
+useEffect(() => {
+  const getNoticeData = async () => {
+    try {
+      const response = await helper.getNotice();
+      const list = response?.data?.data?.data; 
 
-        if (Array.isArray(list)) {
-          const mapped = list.map((item) => ({
-            question: item?.question ?? item?.title ?? "",
-            answer: item?.answer ?? item?.content ?? "",
-          }));
-          setNotiDatas(mapped);
-        } else {
-          setNotiDatas([]);
-        }
-      } catch (error) {
-        console.error("공지 불러오기 실패:", error);
+      if (Array.isArray(list)) {
+        const mapped = list.map((item) => ({
+          question: item?.title ?? item?.question ?? "",
+          answer: item?.content ?? item?.answer ?? "",
+        }));
+        setNotiDatas(mapped);
+      } else {
         setNotiDatas([]);
       }
-    };
+    } catch (error) {
+      console.error("공지 불러오기 실패:", error);
+      setNotiDatas([]);
+    }
+  };
 
-    getNoticeData();
-  }, []);
+  getNoticeData();
+}, []);
+
 
   const handleSearchDatas = () => {
     const searchDataResults = Array(5)
