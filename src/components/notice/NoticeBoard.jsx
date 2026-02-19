@@ -1,4 +1,3 @@
-// NoticeBoard.jsx
 import React, { useState, useEffect } from "react";
 import { SearchBox, SearchInput, SearchIcon } from "../notification/styles";
 import { FaSearch } from "react-icons/fa";
@@ -12,8 +11,6 @@ import useAuthStore from "../../store/useAuthStore";
 import {
   Container,
   Title,
-  SearchContainer,
-  SearchButton,
   FilterButtons,
   FilterButton,
   NoticeList,
@@ -32,9 +29,6 @@ import {
   MenuWrapper,
 } from "./styles";
 
-/* =========================
-   Modal styles (inline)
-========================= */
 const ModalOverlay = styled.div`
   position: fixed;
   top: 0;
@@ -74,8 +68,8 @@ const ModalButton = styled.button`
   cursor: pointer;
   font-weight: 500;
 
-  background-color: ${(props) => (props.confirm ? "#FF7710" : "#FFFAF5")};
-  color: ${(props) => (props.confirm ? "white" : "#FF7710")};
+  background-color: ${(props) => (props.confirm ? "#ff7710" : "#fffaf5")};
+  color: ${(props) => (props.confirm ? "white" : "#ff7710")};
 `;
 
 const DeleteConfirmModal = ({ isOpen, onClose, onConfirm }) => {
@@ -132,18 +126,11 @@ const NoticeBoard = () => {
 
       try {
         const response = await proPage.getNotice();
+        const list = response?.data?.data?.data;
 
-        const payload = response?.data?.data;
-
-        const list = Array.isArray(payload)
-          ? payload
-          : Array.isArray(payload?.list)
-          ? payload.list
-          : [];
-
-        setNotices(list);
-      } catch (error) {
-        console.error("공지사항 데이터 가져오기 오류:", error);
+        setNotices(Array.isArray(list) ? list : []);
+      } catch (err) {
+        console.error("공지사항 데이터 가져오기 오류:", err);
         setError("데이터를 불러오는데 실패했습니다.");
         setNotices([]);
       } finally {
@@ -154,11 +141,9 @@ const NoticeBoard = () => {
     fetchNotices();
   }, []);
 
-
   const filteredNotices = Array.isArray(notices)
     ? notices.filter((notice) => {
         const q = (query ?? "").toLowerCase();
-
         const title = (notice?.title ?? "").toLowerCase();
         const content = (notice?.content ?? "").toLowerCase();
 
@@ -191,9 +176,7 @@ const NoticeBoard = () => {
       ) {
         return;
       }
-      if (showMenuIndex !== null) {
-        setShowMenuIndex(null);
-      }
+      if (showMenuIndex !== null) setShowMenuIndex(null);
     };
 
     document.addEventListener("click", handleClickOutside);
@@ -251,8 +234,8 @@ const NoticeBoard = () => {
         console.error("삭제 실패 응답:", response);
         alert("삭제에 실패했습니다. 다시 시도해주세요.");
       }
-    } catch (error) {
-      console.error("삭제 오류:", error);
+    } catch (err) {
+      console.error("삭제 오류:", err);
       alert("삭제 중 오류가 발생했습니다.");
     } finally {
       setIsDeleteModalOpen(false);
@@ -291,6 +274,9 @@ const NoticeBoard = () => {
       return dateString;
     }
   };
+
+  const canPrev = currentPage > 1;
+  const canNext = currentPage < totalPages;
 
   return (
     <Container>
@@ -343,7 +329,7 @@ const NoticeBoard = () => {
           {currentNotices.map((notice, index) => (
             <NoticeItem key={notice.id ?? index} active={showMenuIndex === index}>
               <NoticeHeader onClick={() => toggleDetails(index)}>
-                {index + 1}. <Badge>{notice.type}</Badge>
+                {startIndex + index + 1}. <Badge>{notice.type}</Badge>
                 <NoticeTitle>{notice.title}</NoticeTitle>
                 <ToggleButton>{openIndex === index ? "▲" : "▼"}</ToggleButton>
 
@@ -433,19 +419,13 @@ const NoticeBoard = () => {
 
       {!loading && !error && filteredNotices.length > 0 && (
         <PaginationWrapper>
-          <PageButton
-            onClick={() => setCurrentPage(currentPage - 1)}
-            disabled={currentPage === 1}
-          >
+          <PageButton onClick={() => setCurrentPage((p) => p - 1)} disabled={!canPrev}>
             ◀ 이전
           </PageButton>
           <span>
-            {currentPage} / {Math.ceil(filteredNotices.length / noticesPerPage) || 1}
+            {currentPage} / {totalPages}
           </span>
-          <PageButton
-            onClick={() => setCurrentPage(currentPage + 1)}
-            disabled={currentPage === Math.ceil(filteredNotices.length / noticesPerPage)}
-          >
+          <PageButton onClick={() => setCurrentPage((p) => p + 1)} disabled={!canNext}>
             다음 ▶
           </PageButton>
         </PaginationWrapper>
